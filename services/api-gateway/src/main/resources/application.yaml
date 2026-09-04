@@ -37,12 +37,16 @@ spring:
               uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/sessions/*/verify-stop
+            - id: station-core-admin
+              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/admin/**
             - id: session-service-reservations
-              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
+              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/reservations/**
             - id: session-service-sessions
-              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
+              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/sessions/**
             - id: billing-service

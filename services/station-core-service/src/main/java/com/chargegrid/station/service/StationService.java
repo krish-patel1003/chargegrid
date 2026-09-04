@@ -24,6 +24,15 @@ public class StationService {
                 List.of(new Connector("connector-1", "CCS", 0.45), new Connector("connector-2", "Type2", 0.35))));
         stations.put("station-2", new Station("station-2", "Riverside", 40.7200, -74.0000,
                 List.of(new Connector("connector-3", "CCS", 0.50))));
+        // Keep the seeded discovery identifiers usable across the demo services.
+        stations.put("11111111-1111-1111-1111-111111111111", new Station(
+                "11111111-1111-1111-1111-111111111111", "Long Beach Civic Center", 33.7683, -118.1956,
+                List.of(new Connector("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "CCS", 0.42),
+                        new Connector("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "J1772", 0.29))));
+        stations.put("22222222-2222-2222-2222-222222222222", new Station(
+                "22222222-2222-2222-2222-222222222222", "Long Beach Marina", 33.7636, -118.1890,
+                List.of(new Connector("cccccccc-cccc-cccc-cccc-cccccccccccc", "CCS", 0.49),
+                        new Connector("dddddddd-dddd-dddd-dddd-dddddddddddd", "CHAdeMO", 0.39))));
     }
     public synchronized List<Dtos.StationView> nearby(double lat, double lon, double radiusKm) {
         return stations.values().stream().filter(s -> distanceKm(lat, lon, s.latitude(), s.longitude()) <= radiusKm).map(this::stationView).toList();
