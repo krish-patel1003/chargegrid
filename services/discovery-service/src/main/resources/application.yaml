@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: discovery-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid}
+    username: ${DATABASE_USERNAME:chargegrid}
+    password: ${DATABASE_PASSWORD:chargegrid_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: 8082
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

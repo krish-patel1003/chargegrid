@@ -1,0 +1,6 @@
+spring:
+  application.name: session-service
+  jpa.hibernate.ddl-auto: validate
+  flyway.enabled: true
+management.endpoints.web.exposure.include: health,info
+server.port: ${SERVER_PORT:8083}

@@ -1,0 +1,14 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes: []
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri:

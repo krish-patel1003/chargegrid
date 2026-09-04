@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: keycloak, namespace: chargegrid}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: keycloak}}
+  template:
+    metadata: {labels: {app: keycloak}}
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.3
+          args: [start-dev]
+          ports: [{name: http, containerPort: 8080}]
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom: {secretKeyRef: {name: chargegrid-secrets, key: KEYCLOAK_ADMIN}}
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom: {secretKeyRef: {name: chargegrid-secrets, key: KEYCLOAK_ADMIN_PASSWORD}}
+          readinessProbe: {httpGet: {path: /health/ready, port: http}, initialDelaySeconds: 30, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /health/live, port: http}, initialDelaySeconds: 60, periodSeconds: 20}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: 1, memory: 1Gi}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: keycloak, namespace: chargegrid}
+spec:
+  type: ClusterIP
+  selector: {app: keycloak}
+  ports: [{name: http, port: 8080, targetPort: http}]

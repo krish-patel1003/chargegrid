@@ -1,6 +1,27 @@
 spring:
   application:
     name: user-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI}
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_users}
+    username: ${DATABASE_USERNAME:chargegrid}
+    password: ${DATABASE_PASSWORD:chargegrid_dev}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
 
 server:
   port: 8081

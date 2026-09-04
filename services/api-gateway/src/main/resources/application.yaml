@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: api-gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/chargegrid}
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+                allowedMethods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+                allowedHeaders: '*'
+                allowCredentials: true
+          routes:
+            - id: user-service
+              uri: ${USER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/users/**
+            - id: discovery-service
+              uri: ${DISCOVERY_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/stations/**
+            - id: station-core-reservations
+              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/reservations/*/verify-start
+            - id: station-core-sessions
+              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/sessions/*/verify-stop
+            - id: session-service-reservations
+              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/reservations/**
+            - id: session-service-sessions
+              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/sessions/**
+            - id: billing-service
+              uri: ${BILLING_SERVICE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/billing/**
+
+server:
+  port: ${SERVER_PORT:8088}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

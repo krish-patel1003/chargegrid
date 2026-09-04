@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_notifications}
+    username: ${DATABASE_USERNAME:chargegrid}
+    password: ${DATABASE_PASSWORD:chargegrid_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  rabbitmq:
+    addresses: ${RABBITMQ_URL:localhost:5672}
+
+server:
+  port: ${SERVER_PORT:8086}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+notification:
+  email:
+    queue: ${NOTIFICATION_EMAIL_QUEUE:chargegrid.notification.email}
+    from: ${NOTIFICATION_EMAIL_FROM:no-reply@chargegrid.example}
+    resend:
+      api-key: ${RESEND_API_KEY:}
+      endpoint: ${RESEND_ENDPOINT:https://api.resend.com/emails}

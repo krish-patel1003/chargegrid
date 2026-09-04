@@ -1,0 +1,124 @@
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: chargegrid-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - chargegrid-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: chargegrid-redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: chargegrid-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-chargegrid}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-chargegrid_dev}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    container_name: chargegrid-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infrastructure/keycloak:/opt/keycloak/data/import:ro
+
+  api-gateway:
+    profiles: [apps]
+    build: ./services/api-gateway
+    ports: ["8088:8088"]
+    environment:
+      JWT_ISSUER_URI: http://keycloak:8080/realms/chargegrid
+      USER_SERVICE_URL: http://user-service:8081
+      DISCOVERY_SERVICE_URL: http://discovery-service:8082
+      SESSION_SERVICE_URL: http://session-service:8083
+      STATION_CORE_SERVICE_URL: http://station-core-service:8084
+      BILLING_SERVICE_URL: http://billing-service:8085
+
+  user-service:
+    profiles: [apps]
+    build: ./services/user-service
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
+      JWT_ISSUER_URI: http://keycloak:8080/realms/chargegrid
+    depends_on: {postgres: {condition: service_healthy}}
+
+  discovery-service:
+    profiles: [apps]
+    build: ./services/discovery-service
+    ports: ["8082:8082"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
+    depends_on: {postgres: {condition: service_healthy}}
+
+  session-service:
+    profiles: [apps]
+    build: ./services/session-service
+    ports: ["8083:8083"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+    depends_on: [postgres, redis, rabbitmq]
+
+  station-core-service:
+    profiles: [apps]
+    build: ./services/station-core-service
+    ports: ["8084:8084"]
+    environment:
+      SERVER_PORT: 8084
+      STATION_ADMIN_KEY: ${STATION_ADMIN_KEY:-demo-admin-key}
+
+  billing-service:
+    profiles: [apps]
+    build: ./services/billing-service
+    ports: ["8085:8085"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    depends_on: {postgres: {condition: service_healthy}}
+
+  notification-service:
+    profiles: [apps]
+    build: ./services/notification-service
+    ports: ["8086:8086"]
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
+      RABBITMQ_HOST: rabbitmq
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on: [postgres, rabbitmq]
+
+volumes:
+  chargegrid-postgres-data:
