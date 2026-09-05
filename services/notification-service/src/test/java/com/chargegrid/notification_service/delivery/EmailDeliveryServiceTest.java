@@ -1,14 +1,15 @@
 package com.chargegrid.notification_service.delivery;
 
+import static org.mockito.Mockito.*;
+
 import com.chargegrid.notification_service.email.EmailProvider;
 import org.junit.jupiter.api.Test;
-
-import static org.mockito.Mockito.*;
 
 class EmailDeliveryServiceTest {
     private final EmailDeliveryRepository repository = mock(EmailDeliveryRepository.class);
     private final EmailProvider provider = mock(EmailProvider.class);
-    private final EmailDeliveryService service = new EmailDeliveryService(repository, provider, "no-reply@example.com");
+    private final EmailDeliveryService service =
+            new EmailDeliveryService(repository, provider, "no-reply@example.com");
 
     @Test
     void duplicateEventIsNotSentAgain() {

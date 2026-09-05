@@ -36,7 +36,8 @@ class StationServiceTest {
     void missingStationIsNotFound() {
         UUID id = UUID.randomUUID();
         when(stations.findById(id)).thenReturn(java.util.Optional.empty());
-        assertThatThrownBy(() -> service.get(id)).isInstanceOf(ResponseStatusException.class)
+        assertThatThrownBy(() -> service.get(id))
+                .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Station not found");
     }
 

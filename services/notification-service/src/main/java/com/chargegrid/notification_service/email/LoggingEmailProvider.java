@@ -12,7 +12,10 @@ public class LoggingEmailProvider implements EmailProvider {
 
     @Override
     public String send(EmailMessage message) {
-        log.info("Email delivery (no-op provider): to={}, subject={}", message.to(), message.subject());
+        log.info(
+                "Email delivery (no-op provider): to={}, subject={}",
+                message.to(),
+                message.subject());
         return "log-provider";
     }
 }

@@ -12,7 +12,8 @@ class StationServiceTest {
     void conflictingReservationsAreRejected() {
         StationService service = new StationService();
         service.reserve("connector-1", "driver-a");
-        ApiException error = assertThrows(ApiException.class, () -> service.reserve("connector-1", "driver-b"));
+        ApiException error =
+                assertThrows(ApiException.class, () -> service.reserve("connector-1", "driver-b"));
         assertEquals(HttpStatus.CONFLICT, error.status);
     }
 
@@ -20,11 +21,17 @@ class StationServiceTest {
     void invalidAndReusedStartCodesHaveExpectedStatuses() {
         StationService service = new StationService();
         Dtos.ReservationView reservation = service.reserve("connector-1", "driver-a");
-        ApiException invalid = assertThrows(ApiException.class, () -> service.verifyStart(reservation.id(), "driver-a", "000000"));
+        ApiException invalid =
+                assertThrows(
+                        ApiException.class,
+                        () -> service.verifyStart(reservation.id(), "driver-a", "000000"));
         assertEquals(HttpStatus.BAD_REQUEST, invalid.status);
         String code = service.simulator("station-1").reservations().get(0).startCode();
         service.verifyStart(reservation.id(), "driver-a", code);
-        ApiException reused = assertThrows(ApiException.class, () -> service.verifyStart(reservation.id(), "driver-a", code));
+        ApiException reused =
+                assertThrows(
+                        ApiException.class,
+                        () -> service.verifyStart(reservation.id(), "driver-a", code));
         assertEquals(HttpStatus.CONFLICT, reused.status);
     }
 
@@ -32,7 +39,10 @@ class StationServiceTest {
     void resourcesAreIsolatedByOwner() {
         StationService service = new StationService();
         Dtos.ReservationView reservation = service.reserve("connector-1", "driver-a");
-        ApiException error = assertThrows(ApiException.class, () -> service.reservation(reservation.id(), "driver-b"));
+        ApiException error =
+                assertThrows(
+                        ApiException.class,
+                        () -> service.reservation(reservation.id(), "driver-b"));
         assertEquals(HttpStatus.FORBIDDEN, error.status);
     }
 
@@ -54,7 +64,10 @@ class StationServiceTest {
         String code = service.simulator("station-1").reservations().get(0).startCode();
         Dtos.SessionView session = service.verifyStart(reservation.id(), "driver-a", code);
         String stopCode = service.simulator("station-1").sessions().get(0).stopCode();
-        ApiException ownerError = assertThrows(ApiException.class, () -> service.verifyStop(session.id(), "driver-b", stopCode));
+        ApiException ownerError =
+                assertThrows(
+                        ApiException.class,
+                        () -> service.verifyStop(session.id(), "driver-b", stopCode));
         assertEquals(HttpStatus.FORBIDDEN, ownerError.status);
         assertEquals("STOPPED", service.verifyStop(session.id(), "driver-a", stopCode).status());
     }

@@ -1,7 +1,6 @@
 package com.chargegrid.user_service.controller;
 
 import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;

@@ -14,11 +14,14 @@ public class SecurityConfig {
     @Bean
     @Profile("!test")
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-        return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .anyExchange().authenticated())
+        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(
+                        exchanges ->
+                                exchanges
+                                        .pathMatchers("/actuator/health", "/actuator/info")
+                                        .permitAll()
+                                        .anyExchange()
+                                        .authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {}))
                 .build();
     }
@@ -26,11 +29,14 @@ public class SecurityConfig {
     @Bean
     @Profile("test")
     SecurityWebFilterChain testSecurityWebFilterChain(ServerHttpSecurity http) {
-        return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .anyExchange().permitAll())
+        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(
+                        exchanges ->
+                                exchanges
+                                        .pathMatchers("/actuator/health", "/actuator/info")
+                                        .permitAll()
+                                        .anyExchange()
+                                        .permitAll())
                 .build();
     }
 }

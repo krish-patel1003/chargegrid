@@ -11,8 +11,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "connectors")
 public class Connector {
-    @Id
-    private UUID id;
+    @Id private UUID id;
     private String connectorType;
     private int powerKw;
     private boolean available;
@@ -21,10 +20,21 @@ public class Connector {
     @JoinColumn(name = "station_id", nullable = false)
     private Station station;
 
-    protected Connector() { }
+    protected Connector() {}
 
-    public UUID getId() { return id; }
-    public String getConnectorType() { return connectorType; }
-    public int getPowerKw() { return powerKw; }
-    public boolean isAvailable() { return available; }
+    public UUID getId() {
+        return id;
+    }
+
+    public String getConnectorType() {
+        return connectorType;
+    }
+
+    public int getPowerKw() {
+        return powerKw;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
 }

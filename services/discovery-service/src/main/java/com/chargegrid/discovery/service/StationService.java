@@ -15,22 +15,37 @@ public class StationService {
     private final StationRepository stationRepository;
     private final ConnectorRepository connectorRepository;
 
-    public StationService(StationRepository stationRepository, ConnectorRepository connectorRepository) {
+    public StationService(
+            StationRepository stationRepository, ConnectorRepository connectorRepository) {
         this.stationRepository = stationRepository;
         this.connectorRepository = connectorRepository;
     }
 
-    public List<StationResponse> nearby(double latitude, double longitude, double radiusKm,
-                                        String connectorType, Boolean available) {
-        return stationRepository.findNearby(latitude, longitude, radiusKm, connectorType, available)
+    public List<StationResponse> nearby(
+            double latitude,
+            double longitude,
+            double radiusKm,
+            String connectorType,
+            Boolean available) {
+        return stationRepository
+                .findNearby(latitude, longitude, radiusKm, connectorType, available)
                 .stream()
-                .map(result -> toResponse(result, connectorRepository.findByStationId(result.getId())))
+                .map(
+                        result ->
+                                toResponse(
+                                        result,
+                                        connectorRepository.findByStationId(result.getId())))
                 .toList();
     }
 
     public StationResponse get(UUID id) {
-        Station station = stationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found"));
+        Station station =
+                stationRepository
+                        .findById(id)
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Station not found"));
         return toResponse(station, connectorRepository.findByStationId(id), null);
     }
 
@@ -38,25 +53,52 @@ public class StationService {
         if (!stationRepository.existsById(stationId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Station not found");
         }
-        return connectorRepository.findByStationId(stationId).stream().map(StationService::toConnector).toList();
+        return connectorRepository.findByStationId(stationId).stream()
+                .map(StationService::toConnector)
+                .toList();
     }
 
-    private StationResponse toResponse(StationRepository.NearbyStation station, List<Connector> connectors) {
-        return new StationResponse(station.getId(), station.getName(), station.getAddress(), station.getLatitude(),
-                station.getLongitude(), station.getDistanceKm(), connectors.stream().map(StationService::toConnector).toList());
+    private StationResponse toResponse(
+            StationRepository.NearbyStation station, List<Connector> connectors) {
+        return new StationResponse(
+                station.getId(),
+                station.getName(),
+                station.getAddress(),
+                station.getLatitude(),
+                station.getLongitude(),
+                station.getDistanceKm(),
+                connectors.stream().map(StationService::toConnector).toList());
     }
 
-    private StationResponse toResponse(Station station, List<Connector> connectors, Double distanceKm) {
-        return new StationResponse(station.getId(), station.getName(), station.getAddress(), station.getLatitude(),
-                station.getLongitude(), distanceKm, connectors.stream().map(StationService::toConnector).toList());
+    private StationResponse toResponse(
+            Station station, List<Connector> connectors, Double distanceKm) {
+        return new StationResponse(
+                station.getId(),
+                station.getName(),
+                station.getAddress(),
+                station.getLatitude(),
+                station.getLongitude(),
+                distanceKm,
+                connectors.stream().map(StationService::toConnector).toList());
     }
 
     private static ConnectorResponse toConnector(Connector connector) {
-        return new ConnectorResponse(connector.getId(), connector.getConnectorType(), connector.getPowerKw(), connector.isAvailable());
+        return new ConnectorResponse(
+                connector.getId(),
+                connector.getConnectorType(),
+                connector.getPowerKw(),
+                connector.isAvailable());
     }
 
-    public record StationResponse(UUID id, String name, String address, double latitude, double longitude,
-                                  Double distanceKm, List<ConnectorResponse> connectors) { }
+    public record StationResponse(
+            UUID id,
+            String name,
+            String address,
+            double latitude,
+            double longitude,
+            Double distanceKm,
+            List<ConnectorResponse> connectors) {}
 
-    public record ConnectorResponse(UUID id, String connectorType, int powerKw, boolean available) { }
+    public record ConnectorResponse(
+            UUID id, String connectorType, int powerKw, boolean available) {}
 }

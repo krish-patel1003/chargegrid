@@ -9,8 +9,23 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/sessions")
 public class SessionController {
     private final StationService service;
-    public SessionController(StationService service) { this.service = service; }
-    @GetMapping("/{id}") public Dtos.SessionView get(@PathVariable String id, @RequestHeader(value="X-User-Id", defaultValue="demo-driver") String owner) { return service.session(id, owner); }
-    @PostMapping("/{id}/verify-stop") public Dtos.SessionView stop(@PathVariable String id, @Valid @RequestBody Dtos.CodeRequest request,
-                                                                       @RequestHeader(value="X-User-Id", defaultValue="demo-driver") String owner) { return service.verifyStop(id, owner, request.code()); }
+
+    public SessionController(StationService service) {
+        this.service = service;
+    }
+
+    @GetMapping("/{id}")
+    public Dtos.SessionView get(
+            @PathVariable String id,
+            @RequestHeader(value = "X-User-Id", defaultValue = "demo-driver") String owner) {
+        return service.session(id, owner);
+    }
+
+    @PostMapping("/{id}/verify-stop")
+    public Dtos.SessionView stop(
+            @PathVariable String id,
+            @Valid @RequestBody Dtos.CodeRequest request,
+            @RequestHeader(value = "X-User-Id", defaultValue = "demo-driver") String owner) {
+        return service.verifyStop(id, owner, request.code());
+    }
 }

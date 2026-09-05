@@ -7,11 +7,11 @@ public record CurrentUserClaims(String subject, String email, String displayName
     public static CurrentUserClaims from(Jwt jwt) {
         String subject = required(jwt.getSubject(), "sub");
         String email = required(jwt.getClaimAsString("email"), "email");
-        String displayName = firstNonBlank(
-                jwt.getClaimAsString("name"),
-                jwt.getClaimAsString("preferred_username"),
-                email
-        );
+        String displayName =
+                firstNonBlank(
+                        jwt.getClaimAsString("name"),
+                        jwt.getClaimAsString("preferred_username"),
+                        email);
         return new CurrentUserClaims(subject, email, displayName);
     }
 
