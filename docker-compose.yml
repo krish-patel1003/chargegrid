@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - chargegrid-postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -59,7 +60,7 @@ services:
     profiles: [apps]
     build: ./services/user-service
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_users
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       JWT_ISSUER_URI: http://keycloak:8080/realms/chargegrid
@@ -70,7 +71,7 @@ services:
     build: ./services/discovery-service
     ports: ["8082:8082"]
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_discovery
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
     depends_on: {postgres: {condition: service_healthy}}
@@ -80,7 +81,7 @@ services:
     build: ./services/session-service
     ports: ["8083:8083"]
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_sessions
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       REDIS_HOST: redis
@@ -99,7 +100,7 @@ services:
     build: ./services/billing-service
     ports: ["8085:8085"]
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_billing
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
@@ -111,7 +112,7 @@ services:
     build: ./services/notification-service
     ports: ["8086:8086"]
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chargegrid_users}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_notifications
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       RABBITMQ_HOST: rabbitmq
