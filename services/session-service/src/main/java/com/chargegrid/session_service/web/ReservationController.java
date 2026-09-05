@@ -14,33 +14,47 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/sessions")
-public class SessionController {
+@RequestMapping("/api/reservations")
+public class ReservationController {
 
     private final SessionService service;
 
-    public SessionController(SessionService service) {
+    public ReservationController(SessionService service) {
         this.service = service;
     }
 
+    @PostMapping
+    public Dtos.ReservationView reserve(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @Valid @RequestBody Dtos.ReserveRequest request) {
+        return service.reserve(CallerId.require(userId), request.connectorId());
+    }
+
     @GetMapping
-    public List<Dtos.SessionView> list(
+    public List<Dtos.ReservationView> list(
             @RequestHeader(value = "X-User-Id", required = false) String userId) {
-        return service.sessions(CallerId.require(userId));
+        return service.reservations(CallerId.require(userId));
     }
 
     @GetMapping("/{id}")
-    public Dtos.SessionView get(
+    public Dtos.ReservationView get(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @PathVariable UUID id) {
-        return service.session(id, CallerId.require(userId));
+        return service.reservation(id, CallerId.require(userId));
     }
 
-    @PostMapping("/{id}/verify-stop")
-    public Dtos.SessionView verifyStop(
+    @PostMapping("/{id}/cancel")
+    public Dtos.ReservationView cancel(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @PathVariable UUID id) {
+        return service.cancel(id, CallerId.require(userId));
+    }
+
+    @PostMapping("/{id}/verify-start")
+    public Dtos.SessionView verifyStart(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @PathVariable UUID id,
             @Valid @RequestBody Dtos.CodeRequest request) {
-        return service.verifyStop(id, CallerId.require(userId), request.code());
+        return service.verifyStart(id, CallerId.require(userId), request.code());
     }
 }

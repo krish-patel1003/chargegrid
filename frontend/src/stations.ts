@@ -67,8 +67,21 @@ export function findStation(id: string): Station | undefined {
     return cache.find((s) => s.id === id) ?? demoStations.find((s) => s.id === id);
 }
 
-export function findByConnector(connectorId: string | undefined): Station {
-    return cache.find((s) => s.connectors.some((c) => c.id === connectorId)) ?? demoStations[0];
+/**
+ * Best-effort station for a reservation or session. Prefers the station id the
+ * API returns, falling back to a connector match for cached demo data.
+ */
+export function resolveStation(
+    stationId: string | undefined,
+    connectorId: string | undefined,
+): Station | undefined {
+    if (stationId) {
+        const known = findStation(stationId);
+        if (known) {
+            return known;
+        }
+    }
+    return cache.find((s) => s.connectors.some((c) => c.id === connectorId));
 }
 
 export function statusMessage(error: unknown): string {

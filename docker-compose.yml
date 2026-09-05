@@ -53,7 +53,6 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       DISCOVERY_SERVICE_URL: http://discovery-service:8082
       SESSION_SERVICE_URL: http://session-service:8083
-      STATION_CORE_SERVICE_URL: http://station-core-service:8084
       BILLING_SERVICE_URL: http://billing-service:8085
 
   user-service:
@@ -86,15 +85,14 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
-    depends_on: [postgres, redis, rabbitmq]
-
-  station-core-service:
-    profiles: [apps]
-    build: ./services/station-core-service
-    ports: ["8084:8084"]
-    environment:
-      SERVER_PORT: 8084
+      RABBITMQ_USER: ${RABBITMQ_USER:-chargegrid}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-chargegrid_dev}
+      DISCOVERY_SERVICE_URL: http://discovery-service:8082
       STATION_ADMIN_KEY: ${STATION_ADMIN_KEY:-demo-admin-key}
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+      rabbitmq: {condition: service_started}
 
   billing-service:
     profiles: [apps]

@@ -41,6 +41,15 @@ class StationServiceTest {
                 .hasMessageContaining("Station not found");
     }
 
+    @Test
+    void missingConnectorIsNotFound() {
+        UUID id = UUID.randomUUID();
+        when(connectors.findById(id)).thenReturn(java.util.Optional.empty());
+        assertThatThrownBy(() -> service.connector(id))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Connector not found");
+    }
+
     private static StationRepository.NearbyStation result(UUID id, double distance) {
         StationRepository.NearbyStation result = mock(StationRepository.NearbyStation.class);
         when(result.getId()).thenReturn(id);

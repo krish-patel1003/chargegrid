@@ -1,6 +1,42 @@
 spring:
-  application.name: session-service
-  jpa.hibernate.ddl-auto: validate
-  flyway.enabled: true
-management.endpoints.web.exposure.include: health,info
-server.port: ${SERVER_PORT:8083}
+  application:
+    name: session-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_sessions}
+    username: ${DATABASE_USERNAME:chargegrid}
+    password: ${DATABASE_PASSWORD:chargegrid_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:chargegrid}
+    password: ${RABBITMQ_PASSWORD:chargegrid_dev}
+  http:
+    client:
+      connect-timeout: 2s
+      read-timeout: 3s
+
+chargegrid:
+  discovery-service:
+    url: ${DISCOVERY_SERVICE_URL:http://localhost:8082}
+  # Shared secret the charging hardware presents on /api/admin/**. Override in
+  # every deployment; the default only exists so the local demo runs.
+  admin-key: ${STATION_ADMIN_KEY:demo-admin-key}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+server:
+  port: ${SERVER_PORT:8083}

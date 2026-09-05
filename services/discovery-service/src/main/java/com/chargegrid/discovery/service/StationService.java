@@ -4,6 +4,7 @@ import com.chargegrid.discovery.domain.Connector;
 import com.chargegrid.discovery.domain.Station;
 import com.chargegrid.discovery.repository.ConnectorRepository;
 import com.chargegrid.discovery.repository.StationRepository;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -58,6 +59,28 @@ public class StationService {
                 .toList();
     }
 
+    /**
+     * Resolves a single connector to the station that owns it and its current tariff.
+     * session-service calls this when a driver reserves, so the reservation can capture the station
+     * and the rate that applied at that moment.
+     */
+    public ConnectorDetail connector(UUID connectorId) {
+        Connector connector =
+                connectorRepository
+                        .findById(connectorId)
+                        .orElseThrow(
+                                () ->
+                                        new ResponseStatusException(
+                                                HttpStatus.NOT_FOUND, "Connector not found"));
+        return new ConnectorDetail(
+                connector.getId(),
+                connector.getStationId(),
+                connector.getConnectorType(),
+                connector.getPowerKw(),
+                connector.isAvailable(),
+                connector.getRatePerKwh());
+    }
+
     private StationResponse toResponse(
             StationRepository.NearbyStation station, List<Connector> connectors) {
         return new StationResponse(
@@ -87,7 +110,8 @@ public class StationService {
                 connector.getId(),
                 connector.getConnectorType(),
                 connector.getPowerKw(),
-                connector.isAvailable());
+                connector.isAvailable(),
+                connector.getRatePerKwh());
     }
 
     public record StationResponse(
@@ -100,5 +124,13 @@ public class StationService {
             List<ConnectorResponse> connectors) {}
 
     public record ConnectorResponse(
-            UUID id, String connectorType, int powerKw, boolean available) {}
+            UUID id, String connectorType, int powerKw, boolean available, BigDecimal ratePerKwh) {}
+
+    public record ConnectorDetail(
+            UUID id,
+            UUID stationId,
+            String connectorType,
+            int powerKw,
+            boolean available,
+            BigDecimal ratePerKwh) {}
 }

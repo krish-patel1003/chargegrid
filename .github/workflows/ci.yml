@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api-gateway, user-service, discovery-service, session-service, station-core-service, billing-service, notification-service]
+        service: [api-gateway, user-service, discovery-service, session-service, billing-service, notification-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}

@@ -1,7 +1,13 @@
 package com.chargegrid.session_service.domain;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,6 +22,9 @@ public class ChargingSession {
     @Column(name = "owner_id", nullable = false)
     private String ownerId;
 
+    @Column(name = "station_id", nullable = false)
+    private String stationId;
+
     @Column(name = "connector_id", nullable = false)
     private String connectorId;
 
@@ -28,19 +37,34 @@ public class ChargingSession {
     @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal energyKwh = BigDecimal.ZERO;
 
+    @Column(name = "rate_per_kwh", nullable = false, precision = 19, scale = 6)
+    private BigDecimal ratePerKwh;
+
+    @Column(name = "stop_code_hash", nullable = false)
+    private String stopCodeHash;
+
+    /** Plaintext the charger's display shows. See V2__charging_codes_and_tariffs.sql. */
+    @Column(name = "stop_code_display", nullable = false)
+    private String stopCodeDisplay;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Status status;
 
     protected ChargingSession() {}
 
-    public ChargingSession(Reservation r, Instant now) {
-        id = UUID.randomUUID();
-        reservationId = r.getId();
-        ownerId = r.getOwnerId();
-        connectorId = r.getConnectorId();
-        startedAt = now;
-        status = Status.ACTIVE;
+    public ChargingSession(
+            Reservation reservation, String stopCodeHash, String stopCodeDisplay, Instant now) {
+        this.id = UUID.randomUUID();
+        this.reservationId = reservation.getId();
+        this.ownerId = reservation.getOwnerId();
+        this.stationId = reservation.getStationId();
+        this.connectorId = reservation.getConnectorId();
+        this.ratePerKwh = reservation.getRatePerKwh();
+        this.stopCodeHash = stopCodeHash;
+        this.stopCodeDisplay = stopCodeDisplay;
+        this.startedAt = now;
+        this.status = Status.ACTIVE;
     }
 
     public enum Status {
@@ -60,6 +84,10 @@ public class ChargingSession {
         return ownerId;
     }
 
+    public String getStationId() {
+        return stationId;
+    }
+
     public String getConnectorId() {
         return connectorId;
     }
@@ -76,8 +104,25 @@ public class ChargingSession {
         return energyKwh;
     }
 
+    public BigDecimal getRatePerKwh() {
+        return ratePerKwh;
+    }
+
+    public String getStopCodeHash() {
+        return stopCodeHash;
+    }
+
+    public String getStopCodeDisplay() {
+        return stopCodeDisplay;
+    }
+
     public Status getStatus() {
         return status;
+    }
+
+    /** Energy delivered so far, priced at the tariff captured when the driver reserved. */
+    public BigDecimal getCost() {
+        return energyKwh.multiply(ratePerKwh).setScale(2, RoundingMode.HALF_UP);
     }
 
     public void addEnergy(BigDecimal value) {

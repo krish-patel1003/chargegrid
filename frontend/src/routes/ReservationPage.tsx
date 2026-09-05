@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, Reservation } from '../api';
 import { Feedback } from '../components/Feedback';
-import { findByConnector, statusMessage } from '../stations';
+import { resolveStation, statusMessage } from '../stations';
 
 const CODE_LENGTH = 6;
 
@@ -48,9 +48,8 @@ export function ReservationPage() {
             .catch((e) => setError(statusMessage(e)));
     };
 
-    const station = findByConnector(reservation?.connectorId);
-    const connector =
-        station.connectors.find((c) => c.id === reservation?.connectorId) ?? station.connectors[0];
+    const station = resolveStation(reservation?.stationId, reservation?.connectorId);
+    const connector = station?.connectors.find((c) => c.id === reservation?.connectorId);
 
     return (
         <section className="narrow">
@@ -65,13 +64,17 @@ export function ReservationPage() {
                     </div>
                     <div className="card info">
                         <b>
-                            {connector.type} · {connector.power} kW
+                            {connector
+                                ? `${connector.type} · ${connector.power} kW`
+                                : reservation.connectorId}
                         </b>
-                        <p>
-                            {station.name}
-                            <br />
-                            {station.address}
-                        </p>
+                        {station && (
+                            <p>
+                                {station.name}
+                                <br />
+                                {station.address}
+                            </p>
+                        )}
                     </div>
                     <label className="code-label">
                         Enter start code

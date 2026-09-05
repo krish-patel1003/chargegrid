@@ -30,6 +30,7 @@ export type ApiStation = {
 
 export type Reservation = {
     id: string;
+    stationId: string;
     connectorId: string;
     ownerId: string;
     status: string;
@@ -40,6 +41,7 @@ export type Reservation = {
 export type Session = {
     id: string;
     reservationId: string;
+    stationId: string;
     connectorId: string;
     ownerId: string;
     status: string;

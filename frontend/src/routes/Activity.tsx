@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Session } from '../api';
 import { Feedback } from '../components/Feedback';
-import { findByConnector, statusMessage } from '../stations';
+import { resolveStation, statusMessage } from '../stations';
 
 export function Activity() {
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -38,7 +38,10 @@ export function Activity() {
             {sessions.map((session) => (
                 <div className="card history" key={session.id}>
                     <div>
-                        <b>{findByConnector(session.connectorId).name}</b>
+                        <b>
+                            {resolveStation(session.stationId, session.connectorId)?.name ??
+                                'Charging session'}
+                        </b>
                         <p>
                             {new Date(session.startedAt).toLocaleString()} ·{' '}
                             {session.meterKwh.toFixed(2)} kWh · {session.status}
