@@ -17,15 +17,27 @@ public class UserProfileService {
 
     @Transactional
     public UserProfileResponse getOrProvision(CurrentUserClaims claims) {
-        UserProfile profile = repository.findByKeycloakUserId(claims.subject())
-                .orElseGet(() -> new UserProfile(claims.subject(), claims.email(), claims.displayName()));
+        UserProfile profile =
+                repository
+                        .findByKeycloakUserId(claims.subject())
+                        .orElseGet(
+                                () ->
+                                        new UserProfile(
+                                                claims.subject(),
+                                                claims.email(),
+                                                claims.displayName()));
 
         profile.updateFromClaims(claims.email(), claims.displayName());
         return toResponse(repository.save(profile));
     }
 
     private UserProfileResponse toResponse(UserProfile profile) {
-        return new UserProfileResponse(profile.getId(), profile.getKeycloakUserId(), profile.getEmail(),
-                profile.getDisplayName(), profile.getCreatedAt(), profile.getUpdatedAt());
+        return new UserProfileResponse(
+                profile.getId(),
+                profile.getKeycloakUserId(),
+                profile.getEmail(),
+                profile.getDisplayName(),
+                profile.getCreatedAt(),
+                profile.getUpdatedAt());
     }
 }

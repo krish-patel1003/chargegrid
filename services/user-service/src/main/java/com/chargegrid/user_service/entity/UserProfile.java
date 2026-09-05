@@ -6,7 +6,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-
 import java.time.Instant;
 import java.util.UUID;
 
@@ -14,8 +13,7 @@ import java.util.UUID;
 @Table(name = "user_profiles")
 public class UserProfile {
 
-    @Id
-    private UUID id;
+    @Id private UUID id;
 
     @Column(name = "keycloak_user_id", nullable = false, unique = true)
     private String keycloakUserId;
@@ -32,14 +30,9 @@ public class UserProfile {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected UserProfile() {
-    }
+    protected UserProfile() {}
 
-    public UserProfile(
-            String keycloakUserId,
-            String email,
-            String displayName
-    ) {
+    public UserProfile(String keycloakUserId, String email, String displayName) {
         this.id = UUID.randomUUID();
         this.keycloakUserId = keycloakUserId;
         this.email = email;

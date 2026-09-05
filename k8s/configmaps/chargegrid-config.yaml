@@ -7,7 +7,8 @@ data:
   POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
   POSTGRES_DB: chargegrid
-  DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid
+  # No shared DATABASE_URL: each service owns its schema and its own Flyway
+  # history, so each Deployment sets its own database.
   REDIS_HOST: redis
   REDIS_PORT: "6379"
   RABBITMQ_HOST: rabbitmq
@@ -17,6 +18,5 @@ data:
   API_GATEWAY_URL: http://api-gateway:8088
   DISCOVERY_SERVICE_URL: http://discovery-service:8082
   SESSION_SERVICE_URL: http://session-service:8083
-  STATION_CORE_SERVICE_URL: http://station-core-service:8084
   BILLING_SERVICE_URL: http://billing-service:8085
   NOTIFICATION_SERVICE_URL: http://notification-service:8086

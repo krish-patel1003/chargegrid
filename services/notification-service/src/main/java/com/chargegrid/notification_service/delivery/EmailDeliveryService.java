@@ -13,13 +13,18 @@ public class EmailDeliveryService {
     private final EmailProvider provider;
     private final String from;
 
-    public EmailDeliveryService(EmailDeliveryRepository repository, EmailProvider provider,
-                                @Value("${notification.email.from}") String from) {
-        this.repository = repository; this.provider = provider; this.from = from;
+    public EmailDeliveryService(
+            EmailDeliveryRepository repository,
+            EmailProvider provider,
+            @Value("${notification.email.from}") String from) {
+        this.repository = repository;
+        this.provider = provider;
+        this.from = from;
     }
 
     @Transactional
-    public boolean deliver(String eventId, String eventType, String recipient, String subject, String text) {
+    public boolean deliver(
+            String eventId, String eventType, String recipient, String subject, String text) {
         if (repository.existsByEventId(eventId)) return false;
         EmailDelivery delivery = new EmailDelivery(eventId, eventType, recipient, subject);
         try {

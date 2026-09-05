@@ -36,8 +36,18 @@ class StationServiceTest {
     void missingStationIsNotFound() {
         UUID id = UUID.randomUUID();
         when(stations.findById(id)).thenReturn(java.util.Optional.empty());
-        assertThatThrownBy(() -> service.get(id)).isInstanceOf(ResponseStatusException.class)
+        assertThatThrownBy(() -> service.get(id))
+                .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Station not found");
+    }
+
+    @Test
+    void missingConnectorIsNotFound() {
+        UUID id = UUID.randomUUID();
+        when(connectors.findById(id)).thenReturn(java.util.Optional.empty());
+        assertThatThrownBy(() -> service.connector(id))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Connector not found");
     }
 
     private static StationRepository.NearbyStation result(UUID id, double distance) {

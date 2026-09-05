@@ -9,6 +9,5 @@ import org.springframework.test.context.ActiveProfiles;
 class ApiGatewayApplicationTests {
 
     @Test
-    void contextLoadsWithoutKeycloak() {
-    }
+    void contextLoadsWithoutKeycloak() {}
 }

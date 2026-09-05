@@ -2,6 +2,7 @@ package com.chargegrid.billing.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
+
 import com.chargegrid.billing.gateway.BillingGateway;
 import com.chargegrid.billing.repository.InvoiceRepository;
 import org.junit.jupiter.api.Test;

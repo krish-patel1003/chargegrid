@@ -9,6 +9,4 @@ public record UserProfileResponse(
         String email,
         String displayName,
         Instant createdAt,
-        Instant updatedAt
-) {
-}
+        Instant updatedAt) {}

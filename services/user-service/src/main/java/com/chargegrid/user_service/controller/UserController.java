@@ -1,10 +1,9 @@
 package com.chargegrid.user_service.controller;
 
-import java.util.Map;
-
 import com.chargegrid.user_service.dto.CurrentUserClaims;
 import com.chargegrid.user_service.dto.UserProfileResponse;
 import com.chargegrid.user_service.service.UserProfileService;
+import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,8 +23,7 @@ public class UserController {
     public Map<String, String> ping() {
         return Map.of(
                 "service", "user-service",
-                "status", "running"
-        );
+                "status", "running");
     }
 
     @GetMapping("/me")

@@ -29,26 +29,18 @@ spring:
               uri: ${DISCOVERY_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/stations/**
-            - id: station-core-reservations
-              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
-              predicates:
-                - Path=/api/reservations/*/verify-start
-            - id: station-core-sessions
-              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
-              predicates:
-                - Path=/api/sessions/*/verify-stop
-            - id: station-core-admin
-              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
-              predicates:
-                - Path=/api/admin/**
             - id: session-service-reservations
-              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
+              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/api/reservations/**
             - id: session-service-sessions
-              uri: ${STATION_CORE_SERVICE_URL:http://localhost:8084}
+              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/api/sessions/**
+            - id: session-service-admin
+              uri: ${SESSION_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/admin/**
             - id: billing-service
               uri: ${BILLING_SERVICE_URL:http://localhost:8085}
               predicates:
