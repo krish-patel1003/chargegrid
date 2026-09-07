@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -13,8 +14,8 @@ import com.chargegrid.session_service.catalog.StationCatalog;
 import com.chargegrid.session_service.domain.ChargingSession;
 import com.chargegrid.session_service.domain.Reservation;
 import com.chargegrid.session_service.dto.Dtos;
-import com.chargegrid.session_service.events.SessionCompleted;
 import com.chargegrid.session_service.lock.InMemoryReservationLock;
+import com.chargegrid.session_service.outbox.OutboxWriter;
 import com.chargegrid.session_service.repository.ChargingSessionRepository;
 import com.chargegrid.session_service.repository.MeterReadingRepository;
 import com.chargegrid.session_service.repository.ReservationRepository;
@@ -30,8 +31,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class SessionServiceTest {
 
@@ -44,9 +47,10 @@ class SessionServiceTest {
     @Mock private ReservationRepository reservations;
     @Mock private ChargingSessionRepository sessions;
     @Mock private MeterReadingRepository readings;
-    @Mock private ApplicationEventPublisher events;
+    @Mock private OutboxWriter outbox;
 
     private AccessCodes codes;
+    private TransactionTemplate transactions;
     private SessionService service;
     private Clock clock;
 
@@ -55,6 +59,13 @@ class SessionServiceTest {
         MockitoAnnotations.openMocks(this);
         clock = Clock.fixed(NOW, ZoneOffset.UTC);
         codes = new AccessCodes();
+        transactions = org.mockito.Mockito.mock(TransactionTemplate.class);
+        when(transactions.execute(any()))
+                .thenAnswer(
+                        i ->
+                                ((TransactionCallback<?>) i.getArgument(0))
+                                        .doInTransaction(
+                                                org.mockito.Mockito.mock(TransactionStatus.class)));
         service =
                 new SessionService(
                         reservations,
@@ -65,7 +76,8 @@ class SessionServiceTest {
                                 new StationCatalog.ConnectorDetail(
                                         connectorId, STATION, "CCS", 150, true, RATE),
                         codes,
-                        events,
+                        outbox,
+                        transactions,
                         clock);
         when(reservations.save(any())).thenAnswer(i -> i.getArgument(0));
         when(sessions.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -105,7 +117,8 @@ class SessionServiceTest {
                                 new StationCatalog.ConnectorDetail(
                                         connectorId, STATION, "CCS", 150, false, RATE),
                         codes,
-                        events,
+                        outbox,
+                        transactions,
                         clock);
 
         ApiException error =
@@ -241,7 +254,7 @@ class SessionServiceTest {
                         () -> service.verifyStop(session.getId(), OWNER, "000000"));
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
-        verify(events, never()).publishEvent(any(SessionCompleted.class));
+        verify(outbox, never()).write(any(), any(), any(), any());
     }
 
     @Test
@@ -260,7 +273,7 @@ class SessionServiceTest {
                                 service.verifyStop(
                                         session.getId(), OWNER, session.getStopCodeDisplay()));
         assertEquals(HttpStatus.CONFLICT, replay.getStatus());
-        verify(events, times(1)).publishEvent(any(SessionCompleted.class));
+        verify(outbox, times(1)).write(any(), any(), eq("ChargingSessionCompleted"), any());
     }
 
     @Test

@@ -1,0 +1,13 @@
+# Integration profile: a real PostgreSQL with PostGIS, because the query under
+# test is native SQL using ST_DWithin and ST_Distance and cannot run on H2.
+spring:
+  datasource:
+    url: ${INTEGRATION_DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_discovery}
+    username: ${INTEGRATION_DATABASE_USERNAME:chargegrid}
+    password: ${INTEGRATION_DATABASE_PASSWORD:chargegrid_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true

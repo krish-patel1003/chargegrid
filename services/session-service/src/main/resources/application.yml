@@ -23,8 +23,11 @@ spring:
 
 chargegrid:
   events:
-    # Default exchange routes by queue name; notification-service listens here.
-    routing-key: ${NOTIFICATION_EMAIL_QUEUE:chargegrid.notification.email}
+    # Topic exchange: notification-service and billing-service each bind their
+    # own queue, so both receive a completed session.
+    exchange: ${EVENTS_EXCHANGE:chargegrid.events}
+    # How often the outbox relay drains unpublished events.
+    relay-interval-ms: ${OUTBOX_RELAY_INTERVAL_MS:1000}
   discovery-service:
     url: ${DISCOVERY_SERVICE_URL:http://localhost:8082}
     connect-timeout-ms: 2000

@@ -60,21 +60,25 @@ retroactively rewrite what a driver already agreed to pay.
 **Cost.** A synchronous call from `session-service` to `discovery-service` on the
 reserve path, with its own timeouts and a 503 when the catalogue is unreachable.
 
-## 5. Session events publish after commit
+## 5. Events go through a transactional outbox
 
-**Decision.** Completion is raised as an in-process event and relayed to RabbitMQ
-by a listener bound to `AFTER_COMMIT`. Publish failures are logged, not rethrown.
+**Decision.** A completed session writes an `outbox_events` row in the same
+transaction; a relay drains it to a topic exchange on a timer, claiming rows with
+`FOR UPDATE SKIP LOCKED`.
 
-**Why.** Publishing inside the transaction meant a broker problem rolled back a
-charging session the driver had already finished. Settlement state matters more
-than notification.
+**Why.** Publishing after commit loses the event if the process dies in between,
+and publishing inside the transaction lets a broker outage roll back a session
+the driver already finished. The outbox avoids both: the event is as durable as
+the session it describes.
 
-**Cost.** Delivery is at-most-once: a crash between commit and publish loses the
-event. A transactional outbox is the correct fix and is not implemented.
+**Cost.** Delivery becomes at-least-once, so every consumer has to be idempotent
+— `email_deliveries.event_id` and `invoices.session_id` are unique for exactly
+that reason. There is also up to one relay interval of latency, and a table that
+needs pruning once it grows.
 
-**Also.** The producer declares the queue. Publishing to the default exchange
-with a routing key matching no queue is silently dropped by RabbitMQ, so relying
-on the consumer having started first loses messages with no error anywhere.
+**Also.** A topic exchange rather than a queue, because notification-service and
+billing-service both need a copy of a completed session and a queue can only be
+drained by one consumer.
 
 ## 6. Charger codes are hashed, with an attempt budget
 
@@ -111,3 +115,30 @@ rejected before CORS ran. Every cross-origin call from the SPA failed.
 **Decision.** Permit `OPTIONS` preflight, and configure CORS only in the security
 chain — not in both places, because two layers each adding
 `Access-Control-Allow-Origin` produces duplicate headers that browsers reject.
+
+## 9. Recipients are resolved at send time, not carried on events
+
+**Decision.** Session events carry `ownerId`; notification-service asks
+user-service for the address when it delivers.
+
+**Why.** An email address is personal data that changes. Embedding it in an
+immutable event means every replay reuses whatever was true when the event was
+written, and spreads PII across every queue and log that touches it.
+
+**Cost.** Delivery now depends on user-service being reachable. The failure modes
+are deliberately different: a directory outage propagates so the message is
+requeued, while an unknown user does not, because redelivery would never fix it.
+
+## 10. Settlement is guarded twice against replay
+
+**Decision.** Before charging, a recorded invoice for the session short-circuits;
+the Stripe call also carries an idempotency key derived from the session id.
+
+**Why.** The event stream is at-least-once, so the same completed session can
+arrive twice. The database check catches the ordinary replay; the idempotency key
+catches the case where two deliveries race and both pass the check, because
+Stripe then returns the original charge rather than making a second one.
+
+**Cost.** A failed charge is recorded as a FAILED invoice rather than retried
+automatically, so collection is a follow-up rather than something the consumer
+resolves on its own.

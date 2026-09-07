@@ -153,18 +153,47 @@ The plaintext is also stored, in a column the simulator reads. In production
 that value lives on the charger and never reaches this database — it is
 persisted here only because the simulator stands in for that hardware.
 
-### Events are published after commit
+### Events go through a transactional outbox
 
-`session.completed` is raised as an in-process Spring event and relayed to
-RabbitMQ by a listener bound to `AFTER_COMMIT`.
+A completed session writes an `outbox_events` row in the same transaction, so
+the session and the intent to announce it commit together or not at all. A relay
+then drains the outbox to a topic exchange on a timer, claiming rows with
+`FOR UPDATE SKIP LOCKED` so every instance can run it without publishing the
+same event twice concurrently.
 
-A broker outage must never roll back a charging session the driver has already
-finished, so the publish happens after the database transaction commits, and a
-publish failure is logged rather than rethrown.
+That makes delivery **at-least-once**: a crash between publishing and marking
+the row published replays the event. Consumers are therefore idempotent —
+`email_deliveries.event_id` and `invoices.session_id` are both unique.
 
-The gap that remains is delivery: a crash between commit and publish loses the
-event. Closing it properly means a transactional outbox — writing the event in
-the same transaction and relaying it separately — which is the natural next step.
+```mermaid
+flowchart LR
+    SS["session-service"]
+    OB[("outbox_events")]
+    EX{{"chargegrid.events<br/>topic exchange"}}
+    NQ["notification queue<br/>binds #"]
+    BQ["settlement queue<br/>binds session.completed"]
+    NS["notification-service<br/>emails a receipt"]
+    BS["billing-service<br/>charges the card"]
+
+    SS -- "same transaction" --> OB
+    OB -- "relay" --> EX
+    EX --> NQ --> NS
+    EX --> BQ --> BS
+```
+
+A topic exchange rather than a queue, because two services now care about a
+completed session and a queue can only be drained by one of them.
+
+### Settlement
+
+billing-service charges the card saved against the driver's Stripe customer,
+off-session, when a session completes. Two guards make an at-least-once event
+safe to act on: an invoice already recorded for the session short-circuits, and
+the Stripe call carries an idempotency key derived from the session id, so even
+a concurrent replay returns the original charge instead of making a second one.
+
+Card details are entered into Stripe Elements in the browser and never reach any
+ChargeGrid service; what is stored is the Stripe payment-method id.
 
 ## Data ownership
 
@@ -181,11 +210,9 @@ radius filter is index-assisted rather than a scan with distance computed per ro
 
 ## Known gaps
 
-- No integration tests against real PostGIS or Redis; coverage is unit-level.
-- The payment screen is a mock; card capture is not wired to Stripe Elements.
-- `notification-service` consumes a fixed set of event types that does not yet
-  include `ChargingSessionCompleted`, and session events carry no recipient
-  address, so email is not actually sent end to end.
-- Event delivery is at-most-once (see the outbox note above).
+- Settlement has not been exercised against live Stripe; it needs a
+  `STRIPE_SECRET_KEY`. Without one, invoices are recorded but no charge is made.
+- Webhook reconciliation is wired but unverified, for the same reason.
 - The operator key is a shared secret shipped to the browser for the simulator.
   Real hardware would use its own client-credentials token.
+- No tax, refunds, or partial captures.

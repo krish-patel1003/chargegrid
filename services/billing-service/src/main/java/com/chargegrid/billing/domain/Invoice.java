@@ -29,6 +29,16 @@ public class Invoice {
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 255)
     private String idempotencyKey;
 
+    /** Set when the invoice settles a charging session; unique, so a replay cannot double-bill. */
+    @Column(name = "session_id", length = 255)
+    private String sessionId;
+
+    @Column(name = "stripe_payment_intent_id", length = 255)
+    private String stripePaymentIntentId;
+
+    @Column(name = "failure_reason")
+    private String failureReason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -51,6 +61,45 @@ public class Invoice {
         this.status = status;
         this.stripeInvoiceId = stripeInvoiceId;
         this.idempotencyKey = "chargegrid-invoice-" + id;
+    }
+
+    /** Settlement of a completed charging session. */
+    public static Invoice forSession(
+            String sessionId, String userId, long amount, String currency) {
+        Invoice invoice = new Invoice();
+        invoice.id = "session-" + sessionId;
+        invoice.userId = userId;
+        invoice.amount = amount;
+        invoice.currency = currency;
+        invoice.status = InvoiceStatus.DRAFT;
+        invoice.sessionId = sessionId;
+        invoice.idempotencyKey = "chargegrid-session-" + sessionId;
+        return invoice;
+    }
+
+    public void paid(String paymentIntentId) {
+        this.status = InvoiceStatus.PAID;
+        this.stripePaymentIntentId = paymentIntentId;
+        this.failureReason = null;
+    }
+
+    public void failed(String paymentIntentId, String reason) {
+        this.status = InvoiceStatus.FAILED;
+        this.stripePaymentIntentId = paymentIntentId;
+        this.failureReason =
+                reason == null ? null : reason.substring(0, Math.min(reason.length(), 500));
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public String getStripePaymentIntentId() {
+        return stripePaymentIntentId;
+    }
+
+    public String getFailureReason() {
+        return failureReason;
     }
 
     @PrePersist
