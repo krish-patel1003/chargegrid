@@ -1,23 +1,22 @@
 package com.chargegrid.session_service.config;
 
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Declares the queue session events are routed to.
+ * Session events go to a topic exchange rather than straight to a queue.
  *
- * <p>Publishing to the default exchange with a routing key that matches no queue is silently
- * dropped by RabbitMQ, so the producer declares the queue itself rather than depending on
- * notification-service having started first. Declaration is idempotent, so both sides may do it.
+ * <p>Two services now care about a completed session — notification-service emails a receipt and
+ * billing-service charges the card — and a queue can only be drained by one of them. An exchange
+ * lets each bind its own queue and receive its own copy.
  */
 @Configuration
 public class RabbitConfig {
 
     @Bean
-    Queue notificationEmailQueue(@Value("${chargegrid.events.routing-key}") String queueName) {
-        return QueueBuilder.durable(queueName).build();
+    TopicExchange eventsExchange(@Value("${chargegrid.events.exchange}") String exchange) {
+        return new TopicExchange(exchange, true, false);
     }
 }

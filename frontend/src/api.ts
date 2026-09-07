@@ -55,6 +55,10 @@ export type Session = {
     cost: number;
 };
 
+export type SavedCard = { brand: string; last4: string };
+
+export type SetupIntent = { setupIntentId: string; clientSecret: string };
+
 export type Simulator = {
     stationId: string;
     connectors: { id: string; type: string; ratePerKwh: number }[];
@@ -74,6 +78,24 @@ export type Simulator = {
         cost: number;
     }[];
 };
+
+/** Performs the request and returns the raw response, for callers that care about status. */
+async function authorized(path: string, options: RequestInit = {}): Promise<Response> {
+    const headers = new Headers(options.headers);
+    headers.set('Content-Type', 'application/json');
+    const token = await accessToken();
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    if (response.status === 401) {
+        throw new UnauthorizedError();
+    }
+    if (!response.ok) {
+        throw new Error((await response.text()) || `Request failed (${response.status})`);
+    }
+    return response;
+}
 
 async function request<T>(path: string, options: RequestInit = {}, admin = false): Promise<T> {
     const headers = new Headers(options.headers);
@@ -115,6 +137,15 @@ export const api = {
     sessions: () => request<Session[]>('/api/sessions'),
     verifyStop: (id: string, code: string) =>
         post<Session>(`/api/sessions/${id}/verify-stop`, { code }),
+    setupIntent: (email: string, name: string) =>
+        post<SetupIntent>('/api/billing/setup-intent', { email, name }),
+    savedCard: async (): Promise<SavedCard | null> => {
+        const response = await authorized('/api/billing/payment-method');
+        // 204 means no card on file yet, which is not an error.
+        return response.status === 204 ? null : ((await response.json()) as SavedCard);
+    },
+    saveCard: (setupIntentId: string) =>
+        post<SavedCard>('/api/billing/payment-method', { setupIntentId }),
     simulator: (stationId: string) =>
         request<Simulator>(`/api/admin/stations/${stationId}/simulator`, {}, true),
     meter: (sessionId: string, kwh: number) =>

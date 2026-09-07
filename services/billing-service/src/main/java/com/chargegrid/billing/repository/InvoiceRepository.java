@@ -6,4 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, String> {
     Optional<Invoice> findByIdempotencyKey(String idempotencyKey);
+
+    Optional<Invoice> findBySessionId(String sessionId);
+
+    Optional<Invoice> findByStripePaymentIntentId(String paymentIntentId);
 }

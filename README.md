@@ -96,6 +96,10 @@ reservations by sending a different id.
 rate stored on the reservation, so a later price change cannot retroactively
 rewrite a finished session.
 
+**Events go through a transactional outbox.** A completed session and the event
+announcing it commit together, and a relay drains the outbox to a topic
+exchange, so a crash cannot lose the receipt or the charge.
+
 ## Development
 
 Each service owns its own database and its own Flyway history. They must not
@@ -111,6 +115,11 @@ npm run format:check
 npm run build
 ```
 
+Integration tests run against real PostGIS, Redis and RabbitMQ. They skip when
+those are not running, so `mvn test` works on a clean checkout;
+`CHARGEGRID_REQUIRE_INTEGRATION=true` turns the skip into a failure, which is
+how CI guarantees they actually ran.
+
 Formatting is enforced rather than maintained by hand — Spotless
 (google-java-format, AOSP) for Java, Prettier for the front end. CI builds every
 service, builds the front end, and validates the k8s manifests against
@@ -118,14 +127,14 @@ published Kubernetes schemas with kubeconform.
 
 ## Known gaps
 
-- No integration tests against real PostGIS or Redis; coverage is unit-level.
-- The payment screen is a mock; card capture is not wired to Stripe Elements.
-- `notification-service` consumes a fixed set of event types that does not yet
-  include `ChargingSessionCompleted`, and session events carry no recipient
-  address, so email is not sent end to end.
-- Session event delivery is at-most-once; a transactional outbox is the fix.
+- Settlement has not been exercised against live Stripe. It needs a
+  `STRIPE_SECRET_KEY` in the root `.env`; without one, invoices are recorded but
+  no charge is attempted.
+- Webhook reconciliation is wired but unverified, for the same reason.
 - The simulator's operator key is a shared secret shipped to the browser. Real
   hardware would use its own client-credentials token.
+- Sessions are settled at the tariff captured on reservation; there is no
+  support for tax, refunds, or partial captures.
 
 ## Security
 

@@ -27,6 +27,6 @@ chargegrid:
     url: http://localhost:8082
   admin-key: integration-test-key
   events:
-    routing-key: chargegrid.integration.test
+    exchange: chargegrid.events.integration-test
     # The tests drive the relay directly rather than waiting on the timer.
     relay-interval-ms: 600000

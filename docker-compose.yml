@@ -111,7 +111,12 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
-    depends_on: {postgres: {condition: service_healthy}}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: ${RABBITMQ_USER:-chargegrid}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-chargegrid_dev}
+    depends_on:
+      postgres: {condition: service_healthy}
+      rabbitmq: {condition: service_started}
 
   notification-service:
     profiles: [apps]

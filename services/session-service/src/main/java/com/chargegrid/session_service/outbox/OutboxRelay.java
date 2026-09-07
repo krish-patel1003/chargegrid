@@ -27,18 +27,26 @@ public class OutboxRelay {
 
     private final OutboxRepository outbox;
     private final AmqpTemplate broker;
-    private final String routingKey;
+    private final String exchange;
     private final Clock clock;
 
     public OutboxRelay(
             OutboxRepository outbox,
             AmqpTemplate broker,
-            @Value("${chargegrid.events.routing-key}") String routingKey,
+            @Value("${chargegrid.events.exchange}") String exchange,
             Clock clock) {
         this.outbox = outbox;
         this.broker = broker;
-        this.routingKey = routingKey;
+        this.exchange = exchange;
         this.clock = clock;
+    }
+
+    /** e.g. ChargingSessionCompleted becomes session.completed. */
+    private static String routingKeyFor(OutboxEvent event) {
+        return switch (event.getEventType()) {
+            case "ChargingSessionCompleted" -> "session.completed";
+            default -> "session." + event.getEventType().toLowerCase();
+        };
     }
 
     @Scheduled(fixedDelayString = "${chargegrid.events.relay-interval-ms:1000}")
@@ -47,7 +55,7 @@ public class OutboxRelay {
         List<OutboxEvent> batch = outbox.claimUnpublished(Limit.of(BATCH_SIZE));
         for (OutboxEvent event : batch) {
             try {
-                broker.convertAndSend(routingKey, event.getPayload());
+                broker.convertAndSend(exchange, routingKeyFor(event), event.getPayload());
                 event.markPublished(Instant.now(clock));
             } catch (Exception e) {
                 // Leave it unpublished; the next tick retries. Publishing is

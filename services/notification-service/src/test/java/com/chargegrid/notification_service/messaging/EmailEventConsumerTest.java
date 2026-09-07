@@ -4,11 +4,11 @@ import static org.mockito.Mockito.*;
 
 import com.chargegrid.notification_service.delivery.EmailDeliveryService;
 import com.chargegrid.notification_service.directory.RecipientDirectory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import tools.jackson.databind.ObjectMapper;
 
 class EmailEventConsumerTest {
 

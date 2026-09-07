@@ -26,6 +26,8 @@ management:
       probes:
         enabled: true
 chargegrid:
+  events:
+    exchange: ${EVENTS_EXCHANGE:chargegrid.events}
   user-service:
     url: ${USER_SERVICE_URL:http://localhost:8081}
     connect-timeout-ms: 2000

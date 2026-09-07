@@ -2,14 +2,14 @@ package com.chargegrid.notification_service.messaging;
 
 import com.chargegrid.notification_service.delivery.EmailDeliveryService;
 import com.chargegrid.notification_service.directory.RecipientDirectory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 @Component
 public class EmailEventConsumer {
@@ -81,14 +81,14 @@ public class EmailEventConsumer {
      */
     private String resolveRecipient(JsonNode event) {
         if (event.hasNonNull("recipient")) {
-            return event.get("recipient").asText();
+            return event.get("recipient").asString();
         }
         if (event.hasNonNull("email")) {
-            return event.get("email").asText();
+            return event.get("email").asString();
         }
         if (event.hasNonNull("ownerId")) {
             return recipients
-                    .lookup(event.get("ownerId").asText())
+                    .lookup(event.get("ownerId").asString())
                     .map(RecipientDirectory.Recipient::email)
                     .orElse(null);
         }
@@ -117,7 +117,7 @@ public class EmailEventConsumer {
                         energy.toPlainString(),
                         cost.toPlainString(),
                         event.hasNonNull("currency")
-                                ? event.get("currency").asText().toUpperCase()
+                                ? event.get("currency").asString().toUpperCase()
                                 : "USD");
     }
 
@@ -126,9 +126,9 @@ public class EmailEventConsumer {
     }
 
     private static String required(JsonNode event, String field) {
-        if (!event.hasNonNull(field) || event.get(field).asText().isBlank()) {
+        if (!event.hasNonNull(field) || event.get(field).asString().isBlank()) {
             throw new IllegalArgumentException("Missing " + field);
         }
-        return event.get(field).asText();
+        return event.get(field).asString();
     }
 }
