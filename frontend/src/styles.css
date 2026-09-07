@@ -453,3 +453,20 @@ select {
     color: #f0ae61;
     margin-bottom: 10px;
 }
+
+.map-wrap {
+    position: relative;
+}
+
+.map-note {
+    position: absolute;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(12, 14, 18, 0.82);
+    font-size: 12px;
+    white-space: nowrap;
+}

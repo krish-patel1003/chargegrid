@@ -4,6 +4,7 @@
   "registrationAllowed": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 1800,
   "clients": [
     {
       "clientId": "chargegrid-frontend",
@@ -12,8 +13,36 @@
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:5173/*"],
-      "webOrigins": ["http://localhost:5173"]
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/login"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "driver",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "driver@chargegrid.test",
+      "firstName": "Demo",
+      "lastName": "Driver",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "driver",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-chargegrid"
+      ]
     }
   ]
 }

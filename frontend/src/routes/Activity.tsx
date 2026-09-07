@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, Session } from '../api';
 import { Feedback } from '../components/Feedback';
-import { resolveStation, statusMessage } from '../stations';
+import { cacheStation, normalize, resolveStation, statusMessage } from '../stations';
 
 export function Activity() {
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -12,9 +12,21 @@ export function Activity() {
     const load = () => {
         setLoading(true);
         api.sessions()
-            .then((data) => {
+            .then(async (data) => {
                 setSessions(data);
                 setError('');
+                // History can be opened directly, with nothing cached from the
+                // discovery screen, so pull in the stations these sessions name.
+                const missing = [...new Set(data.map((s) => s.stationId))].filter(
+                    (id) => id && !resolveStation(id, undefined),
+                );
+                const fetched = await Promise.all(
+                    missing.map((id) => api.station(id).catch(() => null)),
+                );
+                fetched.forEach((station) => station && cacheStation(normalize(station)));
+                if (fetched.some(Boolean)) {
+                    setSessions([...data]);
+                }
             })
             .catch((e) => setError(statusMessage(e)))
             .finally(() => setLoading(false));

@@ -5,7 +5,10 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${JWT_ISSUER_URI}
+          # See JwtDecoderConfig: the expected issuer is the browser-facing
+          # Keycloak URL, while keys are fetched over the internal network.
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/chargegrid}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/chargegrid/protocol/openid-connect/certs}
 
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_users}

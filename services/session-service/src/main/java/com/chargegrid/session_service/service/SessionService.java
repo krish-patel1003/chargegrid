@@ -5,6 +5,7 @@ import com.chargegrid.session_service.domain.ChargingSession;
 import com.chargegrid.session_service.domain.MeterReading;
 import com.chargegrid.session_service.domain.Reservation;
 import com.chargegrid.session_service.dto.Dtos;
+import com.chargegrid.session_service.events.SessionCompleted;
 import com.chargegrid.session_service.lock.ReservationLock;
 import com.chargegrid.session_service.repository.ChargingSessionRepository;
 import com.chargegrid.session_service.repository.MeterReadingRepository;
@@ -15,9 +16,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +39,7 @@ public class SessionService {
     private final ReservationLock lock;
     private final StationCatalog catalog;
     private final AccessCodes codes;
-    private final AmqpTemplate events;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public SessionService(
@@ -49,18 +49,7 @@ public class SessionService {
             ReservationLock lock,
             StationCatalog catalog,
             AccessCodes codes,
-            AmqpTemplate events) {
-        this(reservations, sessions, readings, lock, catalog, codes, events, Clock.systemUTC());
-    }
-
-    public SessionService(
-            ReservationRepository reservations,
-            ChargingSessionRepository sessions,
-            MeterReadingRepository readings,
-            ReservationLock lock,
-            StationCatalog catalog,
-            AccessCodes codes,
-            AmqpTemplate events,
+            ApplicationEventPublisher events,
             Clock clock) {
         this.reservations = reservations;
         this.sessions = sessions;
@@ -240,25 +229,14 @@ public class SessionService {
     }
 
     private void publishCompleted(ChargingSession session) {
-        events.convertAndSend(
-                new EventEnvelope(
-                        UUID.randomUUID(),
-                        "session.completed",
-                        1,
-                        UUID.randomUUID(),
-                        Instant.now(clock),
-                        Map.of(
-                                "sessionId", session.getId(),
-                                "ownerId", session.getOwnerId(),
-                                "energyKwh", session.getEnergyKwh(),
-                                "cost", session.getCost())));
+        events.publishEvent(
+                new SessionCompleted(
+                        session.getId(),
+                        session.getOwnerId(),
+                        session.getStationId(),
+                        session.getConnectorId(),
+                        session.getEnergyKwh(),
+                        session.getCost(),
+                        Instant.now(clock)));
     }
-
-    public record EventEnvelope(
-            UUID eventId,
-            String eventType,
-            int eventVersion,
-            UUID correlationId,
-            Instant occurredAt,
-            Object payload) {}
 }

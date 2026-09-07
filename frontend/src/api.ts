@@ -1,11 +1,16 @@
+import { accessToken } from './auth/oidc';
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8088').replace(
     /\/$/,
     '',
 );
 
-// TODO: replace with the subject of the Keycloak access token once the OIDC
-// login flow is wired up; the gateway will then forward the caller identity.
-const USER_ID = 'demo-driver';
+/** Raised when the session is gone, so callers can send the driver back to sign in. */
+export class UnauthorizedError extends Error {
+    constructor() {
+        super('Your session has expired. Please sign in again.');
+    }
+}
 
 export type ApiConnector = {
     id: string;
@@ -73,11 +78,22 @@ export type Simulator = {
 async function request<T>(path: string, options: RequestInit = {}, admin = false): Promise<T> {
     const headers = new Headers(options.headers);
     headers.set('Content-Type', 'application/json');
-    headers.set('X-User-Id', USER_ID);
+
+    // The caller identity is never sent from here. The gateway derives it from
+    // the access token and forwards it downstream, so a browser cannot claim to
+    // be another driver.
+    const token = await accessToken();
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
     if (admin) {
         headers.set('X-Admin-Key', import.meta.env.VITE_ADMIN_KEY || 'demo-admin-key');
     }
+
     const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    if (response.status === 401) {
+        throw new UnauthorizedError();
+    }
     if (!response.ok) {
         throw new Error((await response.text()) || `Request failed (${response.status})`);
     }

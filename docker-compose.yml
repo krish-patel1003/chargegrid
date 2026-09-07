@@ -40,6 +40,10 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      # Tokens must carry the issuer the browser signed in against, not the
+      # container hostname, or resource servers reject them for a bad `iss`.
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "8080:8080"
     volumes:
@@ -50,7 +54,8 @@ services:
     build: ./services/api-gateway
     ports: ["8088:8088"]
     environment:
-      JWT_ISSUER_URI: http://keycloak:8080/realms/chargegrid
+      JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/chargegrid
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/chargegrid/protocol/openid-connect/certs
       USER_SERVICE_URL: http://user-service:8081
       DISCOVERY_SERVICE_URL: http://discovery-service:8082
       SESSION_SERVICE_URL: http://session-service:8083
@@ -63,7 +68,8 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/chargegrid_users
       DATABASE_USERNAME: ${POSTGRES_USER:-chargegrid}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
-      JWT_ISSUER_URI: http://keycloak:8080/realms/chargegrid
+      JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/chargegrid
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/chargegrid/protocol/openid-connect/certs
     depends_on: {postgres: {condition: service_healthy}}
 
   discovery-service:

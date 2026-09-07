@@ -20,14 +20,15 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USER:chargegrid}
     password: ${RABBITMQ_PASSWORD:chargegrid_dev}
-  http:
-    client:
-      connect-timeout: 2s
-      read-timeout: 3s
 
 chargegrid:
+  events:
+    # Default exchange routes by queue name; notification-service listens here.
+    routing-key: ${NOTIFICATION_EMAIL_QUEUE:chargegrid.notification.email}
   discovery-service:
     url: ${DISCOVERY_SERVICE_URL:http://localhost:8082}
+    connect-timeout-ms: 2000
+    read-timeout-ms: 3000
   # Shared secret the charging hardware presents on /api/admin/**. Override in
   # every deployment; the default only exists so the local demo runs.
   admin-key: ${STATION_ADMIN_KEY:demo-admin-key}

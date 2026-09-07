@@ -1,7 +1,20 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
+import { userManager } from '../auth/oidc';
 
 export function Login() {
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const from = (location.state as { from?: string } | null)?.from;
+
+    useEffect(() => {
+        if (!loading && user) {
+            navigate(from ?? '/discover', { replace: true });
+        }
+    }, [user, loading, from, navigate]);
+
     return (
         <section className="center-page">
             <div className="card auth">
@@ -10,10 +23,10 @@ export function Login() {
                     Power up, <i>without</i> the wait.
                 </h1>
                 <p>Find a connector, reserve it for ten minutes, and get moving.</p>
-                <button onClick={() => navigate('/discover')}>Continue with Keycloak</button>
-                <small>
-                    Demo mode is enabled. Production login uses the configured OIDC client.
-                </small>
+                <button onClick={() => userManager.signinRedirect({ state: { from } })}>
+                    Continue with Keycloak
+                </button>
+                <small>Demo realm: sign in as `driver` / `driver`.</small>
             </div>
         </section>
     );
