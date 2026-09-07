@@ -5,7 +5,13 @@ spring:
     oauth2:
       resourceserver:
         jwt:
+          # issuer-uri is the value expected in the token's `iss` claim, which is
+          # whatever hostname the *browser* used to sign in. jwk-set-uri is where
+          # this service fetches signing keys, which in Docker is the internal
+          # hostname. They differ, so they are configured separately rather than
+          # letting issuer-uri drive discovery.
           issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/chargegrid}
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/chargegrid/protocol/openid-connect/certs}
   cloud:
     compatibility-verifier:
       enabled: false
