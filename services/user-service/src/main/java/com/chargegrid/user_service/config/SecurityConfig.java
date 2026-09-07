@@ -24,6 +24,11 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers("/api/users/ping")
                                         .permitAll()
+                                        // Service-to-service only: the gateway
+                                        // routes /api/**, so /internal/** has no
+                                        // path in from outside the cluster.
+                                        .requestMatchers("/internal/**")
+                                        .permitAll()
                                         .anyRequest()
                                         .authenticated())
                 .exceptionHandling(
@@ -48,6 +53,11 @@ public class SecurityConfig {
                                 auth.requestMatchers("/actuator/health")
                                         .permitAll()
                                         .requestMatchers("/api/users/ping")
+                                        .permitAll()
+                                        // Service-to-service only: the gateway
+                                        // routes /api/**, so /internal/** has no
+                                        // path in from outside the cluster.
+                                        .requestMatchers("/internal/**")
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())

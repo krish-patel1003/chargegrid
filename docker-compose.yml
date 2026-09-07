@@ -123,6 +123,7 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-chargegrid_dev}
       RABBITMQ_HOST: rabbitmq
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      USER_SERVICE_URL: http://user-service:8081
     depends_on: [postgres, rabbitmq]
 
 volumes:
