@@ -5,8 +5,8 @@ import com.chargegrid.session_service.domain.ChargingSession;
 import com.chargegrid.session_service.domain.MeterReading;
 import com.chargegrid.session_service.domain.Reservation;
 import com.chargegrid.session_service.dto.Dtos;
-import com.chargegrid.session_service.events.SessionCompleted;
 import com.chargegrid.session_service.lock.ReservationLock;
+import com.chargegrid.session_service.outbox.OutboxWriter;
 import com.chargegrid.session_service.repository.ChargingSessionRepository;
 import com.chargegrid.session_service.repository.MeterReadingRepository;
 import com.chargegrid.session_service.repository.ReservationRepository;
@@ -16,18 +16,19 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Owns the reservation and charging lifecycle: hold a connector, hand the driver a start code,
  * meter energy while charging, and settle the session on a valid stop code.
  */
 @Service
-@Transactional
 public class SessionService {
 
     private static final Duration RESERVATION_WINDOW = Duration.ofMinutes(10);
@@ -39,7 +40,8 @@ public class SessionService {
     private final ReservationLock lock;
     private final StationCatalog catalog;
     private final AccessCodes codes;
-    private final ApplicationEventPublisher events;
+    private final OutboxWriter outbox;
+    private final TransactionTemplate transactions;
     private final Clock clock;
 
     public SessionService(
@@ -49,7 +51,8 @@ public class SessionService {
             ReservationLock lock,
             StationCatalog catalog,
             AccessCodes codes,
-            ApplicationEventPublisher events,
+            OutboxWriter outbox,
+            TransactionTemplate transactions,
             Clock clock) {
         this.reservations = reservations;
         this.sessions = sessions;
@@ -57,7 +60,8 @@ public class SessionService {
         this.lock = lock;
         this.catalog = catalog;
         this.codes = codes;
-        this.events = events;
+        this.outbox = outbox;
+        this.transactions = transactions;
         this.clock = clock;
     }
 
@@ -72,24 +76,19 @@ public class SessionService {
             throw new ApiException(HttpStatus.CONFLICT, "connector is out of service");
         }
         try (AutoCloseable ignored = lock.acquire(connectorId, LOCK_TIMEOUT)) {
-            if (reservations.existsByConnectorIdAndActiveTrue(connectorId)) {
-                throw new ApiException(HttpStatus.CONFLICT, "connector is already reserved");
-            }
-            String code = codes.generate();
-            Instant now = Instant.now(clock);
-            Reservation reservation =
-                    new Reservation(
-                            owner,
-                            connector.stationId(),
-                            connectorId,
-                            connector.ratePerKwh(),
-                            codes.hash(code),
-                            code,
-                            now,
-                            now.plus(RESERVATION_WINDOW));
-            return Dtos.ReservationView.of(reservations.save(reservation));
+            // The transaction is opened and committed inside the lock. Annotating
+            // this method instead would commit after the lock is released, letting
+            // a second driver read "no active reservation" and insert one too.
+            Reservation saved =
+                    transactions.execute(
+                            status -> insertReservation(owner, connectorId, connector));
+            return Dtos.ReservationView.of(saved);
         } catch (ApiException e) {
             throw e;
+        } catch (DataIntegrityViolationException e) {
+            // uk_active_connector rejected it. The lock makes this rare rather than
+            // impossible, and the index is what actually guarantees the invariant.
+            throw new ApiException(HttpStatus.CONFLICT, "connector is already reserved");
         } catch (IllegalStateException e) {
             // The lock timed out: another driver is mid-reservation on this connector.
             throw new ApiException(HttpStatus.CONFLICT, "connector is busy");
@@ -98,10 +97,31 @@ public class SessionService {
         }
     }
 
+    private Reservation insertReservation(
+            String owner, String connectorId, StationCatalog.ConnectorDetail connector) {
+        if (reservations.existsByConnectorIdAndActiveTrue(connectorId)) {
+            throw new ApiException(HttpStatus.CONFLICT, "connector is already reserved");
+        }
+        String code = codes.generate();
+        Instant now = Instant.now(clock);
+        return reservations.save(
+                new Reservation(
+                        owner,
+                        connector.stationId(),
+                        connectorId,
+                        connector.ratePerKwh(),
+                        codes.hash(code),
+                        code,
+                        now,
+                        now.plus(RESERVATION_WINDOW)));
+    }
+
+    @Transactional
     public Dtos.ReservationView reservation(UUID id, String owner) {
         return Dtos.ReservationView.of(loadReservation(id, owner));
     }
 
+    @Transactional
     public List<Dtos.ReservationView> reservations(String owner) {
         return reservations.findAllByOwnerId(owner).stream()
                 .peek(this::expireIfElapsed)
@@ -109,6 +129,7 @@ public class SessionService {
                 .toList();
     }
 
+    @Transactional
     public Dtos.ReservationView cancel(UUID id, String owner) {
         Reservation reservation = loadReservation(id, owner);
         if (reservation.getStatus() == Reservation.Status.ACTIVE) {
@@ -119,6 +140,7 @@ public class SessionService {
     }
 
     /** Exchanges a valid start code for a charging session. */
+    @Transactional
     public Dtos.SessionView verifyStart(UUID reservationId, String owner, String code) {
         Reservation reservation = loadReservation(reservationId, owner);
         if (reservation.getStatus() == Reservation.Status.EXPIRED) {
@@ -145,10 +167,12 @@ public class SessionService {
         return Dtos.SessionView.of(session);
     }
 
+    @Transactional
     public Dtos.SessionView session(UUID id, String owner) {
         return Dtos.SessionView.of(loadSession(id, owner));
     }
 
+    @Transactional
     public List<Dtos.SessionView> sessions(String owner) {
         return sessions.findAllByOwnerIdOrderByStartedAtDesc(owner).stream()
                 .map(Dtos.SessionView::of)
@@ -156,6 +180,7 @@ public class SessionService {
     }
 
     /** Ends a session on a valid stop code and publishes the event billing settles from. */
+    @Transactional
     public Dtos.SessionView verifyStop(UUID id, String owner, String code) {
         ChargingSession session = loadSession(id, owner);
         if (session.getStatus() != ChargingSession.Status.ACTIVE) {
@@ -174,6 +199,7 @@ public class SessionService {
      * Records energy delivered by the charger. Operator-facing: only the hardware knows how many
      * kilowatt-hours actually flowed, so drivers cannot call this.
      */
+    @Transactional
     public Dtos.SessionView meter(UUID id, BigDecimal kwh) {
         if (kwh == null || kwh.signum() <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "kwh must be positive");
@@ -190,6 +216,7 @@ public class SessionService {
         return Dtos.SessionView.of(sessions.save(session));
     }
 
+    @Transactional
     public Dtos.SimulatorView simulator(String stationId) {
         List<Dtos.SimulatorReservation> stationReservations =
                 reservations.findAllByStationId(stationId).stream()
@@ -228,15 +255,22 @@ public class SessionService {
         }
     }
 
+    /**
+     * Records the completion event in the same transaction as the completed session, so the two
+     * cannot diverge. The relay moves it to the broker afterwards.
+     */
     private void publishCompleted(ChargingSession session) {
-        events.publishEvent(
-                new SessionCompleted(
-                        session.getId(),
-                        session.getOwnerId(),
-                        session.getStationId(),
-                        session.getConnectorId(),
-                        session.getEnergyKwh(),
-                        session.getCost(),
-                        Instant.now(clock)));
+        outbox.write(
+                "charging_session",
+                session.getId().toString(),
+                "ChargingSessionCompleted",
+                Map.of(
+                        "sessionId", session.getId().toString(),
+                        "ownerId", session.getOwnerId(),
+                        "stationId", session.getStationId(),
+                        "connectorId", session.getConnectorId(),
+                        "energyKwh", session.getEnergyKwh(),
+                        "cost", session.getCost(),
+                        "currency", "usd"));
     }
 }

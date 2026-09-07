@@ -1,0 +1,32 @@
+# Integration profile: real PostgreSQL, Redis and RabbitMQ. The behaviour under
+# test - a distributed lock, a partial unique index and a transactional outbox -
+# only exists when those are real.
+spring:
+  datasource:
+    url: ${INTEGRATION_DATABASE_URL:jdbc:postgresql://localhost:5432/chargegrid_sessions}
+    username: ${INTEGRATION_DATABASE_USERNAME:chargegrid}
+    password: ${INTEGRATION_DATABASE_PASSWORD:chargegrid_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${INTEGRATION_REDIS_HOST:localhost}
+      port: ${INTEGRATION_REDIS_PORT:6379}
+  rabbitmq:
+    host: ${INTEGRATION_RABBITMQ_HOST:localhost}
+    port: ${INTEGRATION_RABBITMQ_PORT:5672}
+    username: ${INTEGRATION_RABBITMQ_USER:guest}
+    password: ${INTEGRATION_RABBITMQ_PASSWORD:guest}
+
+chargegrid:
+  discovery-service:
+    url: http://localhost:8082
+  admin-key: integration-test-key
+  events:
+    routing-key: chargegrid.integration.test
+    # The tests drive the relay directly rather than waiting on the timer.
+    relay-interval-ms: 600000

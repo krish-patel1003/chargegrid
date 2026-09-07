@@ -42,6 +42,57 @@ jobs:
       - run: npm run format:check
       - run: npm run build
 
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: chargegrid
+          POSTGRES_PASSWORD: chargegrid_dev
+          POSTGRES_DB: chargegrid
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U chargegrid"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+      rabbitmq:
+        image: rabbitmq:4
+        ports: ["5672:5672"]
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s --health-timeout 10s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Create per-service databases
+        env:
+          PGPASSWORD: chargegrid_dev
+        run: |
+          psql -h localhost -U chargegrid -d chargegrid -c 'CREATE DATABASE chargegrid_discovery'
+          psql -h localhost -U chargegrid -d chargegrid -c 'CREATE DATABASE chargegrid_sessions'
+          psql -h localhost -U chargegrid -d chargegrid_discovery -c 'CREATE EXTENSION IF NOT EXISTS postgis'
+      # CHARGEGRID_REQUIRE_INTEGRATION turns the "infrastructure unreachable"
+      # skip into a failure, so these can never silently pass by not running.
+      - name: discovery-service integration tests
+        working-directory: services/discovery-service
+        env:
+          CHARGEGRID_REQUIRE_INTEGRATION: "true"
+        run: mvn --batch-mode test
+      - name: session-service integration tests
+        working-directory: services/session-service
+        env:
+          CHARGEGRID_REQUIRE_INTEGRATION: "true"
+          INTEGRATION_RABBITMQ_USER: guest
+          INTEGRATION_RABBITMQ_PASSWORD: guest
+        run: mvn --batch-mode test
+
   manifests:
     runs-on: ubuntu-latest
     steps:
