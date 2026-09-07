@@ -17,9 +17,11 @@ export const userManager = new UserManager({
     post_logout_redirect_uri: `${window.location.origin}/login`,
     response_type: 'code',
     scope: 'openid profile email',
-    // Tokens live in sessionStorage rather than localStorage so they do not
-    // outlive the tab, and are renewed in the background before they expire.
-    userStore: new WebStorageStateStore({ store: window.sessionStorage }),
+    // localStorage rather than sessionStorage: the operator simulator is opened
+    // in a second tab, and sessionStorage is per-tab, so a session stored there
+    // would force a fresh sign-in for every tab. Access tokens are short-lived
+    // and renewed silently, which is what bounds the exposure.
+    userStore: new WebStorageStateStore({ store: window.localStorage }),
     automaticSilentRenew: true,
 });
 

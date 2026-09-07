@@ -13,6 +13,7 @@ import com.chargegrid.session_service.catalog.StationCatalog;
 import com.chargegrid.session_service.domain.ChargingSession;
 import com.chargegrid.session_service.domain.Reservation;
 import com.chargegrid.session_service.dto.Dtos;
+import com.chargegrid.session_service.events.SessionCompleted;
 import com.chargegrid.session_service.lock.InMemoryReservationLock;
 import com.chargegrid.session_service.repository.ChargingSessionRepository;
 import com.chargegrid.session_service.repository.MeterReadingRepository;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 class SessionServiceTest {
@@ -43,7 +44,7 @@ class SessionServiceTest {
     @Mock private ReservationRepository reservations;
     @Mock private ChargingSessionRepository sessions;
     @Mock private MeterReadingRepository readings;
-    @Mock private AmqpTemplate events;
+    @Mock private ApplicationEventPublisher events;
 
     private AccessCodes codes;
     private SessionService service;
@@ -240,7 +241,7 @@ class SessionServiceTest {
                         () -> service.verifyStop(session.getId(), OWNER, "000000"));
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
-        verify(events, never()).convertAndSend(any());
+        verify(events, never()).publishEvent(any(SessionCompleted.class));
     }
 
     @Test
@@ -259,7 +260,7 @@ class SessionServiceTest {
                                 service.verifyStop(
                                         session.getId(), OWNER, session.getStopCodeDisplay()));
         assertEquals(HttpStatus.CONFLICT, replay.getStatus());
-        verify(events, times(1)).convertAndSend(any());
+        verify(events, times(1)).publishEvent(any(SessionCompleted.class));
     }
 
     @Test

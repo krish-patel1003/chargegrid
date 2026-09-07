@@ -13,11 +13,15 @@
       "protocol": "openid-connect",
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
-      "redirectUris": ["http://localhost:5173/*"],
-      "postLogoutRedirectUris": ["http://localhost:5173/login"],
-      "webOrigins": ["http://localhost:5173"],
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/login"
       }
     }
   ],
@@ -36,7 +40,9 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["default-roles-chargegrid"]
+      "realmRoles": [
+        "default-roles-chargegrid"
+      ]
     }
   ]
 }
