@@ -113,7 +113,8 @@ npm run build
 
 Formatting is enforced rather than maintained by hand — Spotless
 (google-java-format, AOSP) for Java, Prettier for the front end. CI builds every
-service, builds the front end, and validates the k8s manifests.
+service, builds the front end, and validates the k8s manifests against
+published Kubernetes schemas with kubeconform.
 
 ## Known gaps
 
