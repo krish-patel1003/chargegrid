@@ -53,6 +53,11 @@ cd frontend && npm install && npm run dev
 Open <http://localhost:5173> and sign in as **`driver` / `driver`** (seeded by
 the realm import).
 
+Card capture needs Stripe test keys: put `STRIPE_SECRET_KEY` in the root `.env`
+and `VITE_STRIPE_PUBLISHABLE_KEY` in `frontend/.env`. Save `4242 4242 4242 4242`
+with any future expiry, and the card is charged automatically when a session
+ends.
+
 To walk the whole flow, open the operator display for a station in a second tab:
 
 ```
@@ -127,14 +132,14 @@ published Kubernetes schemas with kubeconform.
 
 ## Known gaps
 
-- Settlement has not been exercised against live Stripe. It needs a
-  `STRIPE_SECRET_KEY` in the root `.env`; without one, invoices are recorded but
-  no charge is attempted.
-- Webhook reconciliation is wired but unverified, for the same reason.
+- Webhook reconciliation is wired but unverified: it needs a publicly reachable
+  URL and `STRIPE_WEBHOOK_SECRET`, so `stripe listen --forward-to` is the way to
+  exercise it.
+- A failed charge is recorded as a FAILED invoice and left there; there is no
+  dunning or retry.
 - The simulator's operator key is a shared secret shipped to the browser. Real
   hardware would use its own client-credentials token.
-- Sessions are settled at the tariff captured on reservation; there is no
-  support for tax, refunds, or partial captures.
+- No tax, refunds, or partial captures.
 
 ## Security
 

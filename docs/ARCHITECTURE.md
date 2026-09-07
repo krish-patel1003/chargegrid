@@ -195,6 +195,12 @@ a concurrent replay returns the original charge instead of making a second one.
 Card details are entered into Stripe Elements in the browser and never reach any
 ChargeGrid service; what is stored is the Stripe payment-method id.
 
+Verified against Stripe test mode: a completed session charges the saved card and
+records a PAID invoice; a card that declines at charge time records a FAILED
+invoice carrying Stripe's reason, so the debt is not lost; a driver with no card
+records the debt without calling Stripe; and republishing the same completed
+session leaves exactly one invoice and one PaymentIntent.
+
 ## Data ownership
 
 | Database | Tables |
@@ -210,9 +216,10 @@ radius filter is index-assisted rather than a scan with distance computed per ro
 
 ## Known gaps
 
-- Settlement has not been exercised against live Stripe; it needs a
-  `STRIPE_SECRET_KEY`. Without one, invoices are recorded but no charge is made.
-- Webhook reconciliation is wired but unverified, for the same reason.
+- Webhook reconciliation is wired but unverified; it needs a publicly reachable
+  URL and `STRIPE_WEBHOOK_SECRET` (`stripe listen --forward-to`).
+- A failed charge is recorded as a FAILED invoice and left there. There is no
+  dunning, retry, or way for a driver to settle an outstanding balance.
 - The operator key is a shared secret shipped to the browser for the simulator.
   Real hardware would use its own client-credentials token.
 - No tax, refunds, or partial captures.
